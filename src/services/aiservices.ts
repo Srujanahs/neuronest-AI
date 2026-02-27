@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(
-  import.meta.env.VITE_GEMINI_API_KEY
+  import.meta.env.AIzaSyC5NNB-w9Iiy25GsPCT_na_0KRn0WJaMf8
 );
 
 export async function generateHolisticFeedback(data:any) {
