@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { APTITUDE_QUESTIONS } from '../data/mockData';
 import { Brain, Timer, ChevronRight, CheckCircle2, XCircle, RefreshCcw, Trophy, Sparkles, Target, AlertCircle } from 'lucide-react';
 import { aiService, AIAptitudeFeedback } from '../services/aiService';
+import { useAuth } from '../context/AuthContext';
+import { supabaseService } from '../services/supabaseService';
 
 const Aptitude: React.FC = () => {
+  const { user } = useAuth();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -26,6 +29,17 @@ const Aptitude: React.FC = () => {
   const handleFinish = async () => {
     setQuizFinished(true);
     setIsAnalyzing(true);
+    
+    // Save to Supabase
+    if (user) {
+      await supabaseService.saveQuizResult(
+        user.id, 
+        score, 
+        APTITUDE_QUESTIONS.length, 
+        APTITUDE_QUESTIONS[0].category // Using first question's category as a proxy
+      );
+    }
+
     const feedback = await aiService.analyzeAptitudePerformance(score, APTITUDE_QUESTIONS.length, ['Logical', 'Quantitative', 'Verbal']);
     setAiFeedback(feedback);
     setIsAnalyzing(false);

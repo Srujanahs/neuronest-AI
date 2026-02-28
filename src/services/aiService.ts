@@ -1,3 +1,4 @@
+import { GoogleGenAI, Type } from "@google/genai";
 import { CodingChallenge, AptitudeQuestion } from '../types';
 
 export interface AICommunicationFeedback {
@@ -32,24 +33,71 @@ export interface HolisticReport {
 }
 
 class AIService {
+  private ai: GoogleGenAI;
+
+  constructor() {
+    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+  }
+
   private delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async analyzeCommunication(text: string): Promise<AICommunicationFeedback> {
-    await this.delay(2000);
-    return {
-      fluency: 82 + Math.floor(Math.random() * 10),
-      vocabulary: 75 + Math.floor(Math.random() * 15),
-      clarity: 88 + Math.floor(Math.random() * 8),
-      confidence: 70 + Math.floor(Math.random() * 20),
-      summary: "Your writing demonstrates a strong grasp of professional tone. You communicate complex ideas with relative ease, though some sentence structures could be more concise.",
-      suggestions: [
-        "Use more varied transition words to improve flow between paragraphs.",
-        "Consider using stronger verbs to replace 'adverb + weak verb' combinations.",
-        "Your opening statement is very impactful; maintain that energy throughout."
-      ]
-    };
+    try {
+      const response = await this.ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Analyze the following communication text and provide feedback in JSON format.
+        Text: "${text}"
+        
+        The feedback should include:
+        1. Fluency score (0-100)
+        2. Vocabulary score (0-100)
+        3. Clarity score (0-100)
+        4. Confidence score (0-100)
+        5. A brief summary of the writing style and tone.
+        6. A list of 3 specific suggestions for improvement.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              fluency: { type: Type.NUMBER },
+              vocabulary: { type: Type.NUMBER },
+              clarity: { type: Type.NUMBER },
+              confidence: { type: Type.NUMBER },
+              summary: { type: Type.STRING },
+              suggestions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
+            },
+            required: ["fluency", "vocabulary", "clarity", "confidence", "summary", "suggestions"]
+          }
+        }
+      });
+
+      const result = JSON.parse(response.text || '{}');
+      return {
+        fluency: result.fluency || 70,
+        vocabulary: result.vocabulary || 70,
+        clarity: result.clarity || 70,
+        confidence: result.confidence || 70,
+        summary: result.summary || "Unable to generate summary.",
+        suggestions: result.suggestions || ["Try to be more concise.", "Use active voice.", "Check for grammatical errors."]
+      };
+    } catch (error) {
+      console.error("Gemini AI analysis failed:", error);
+      // Fallback to mock data if AI fails
+      return {
+        fluency: 75,
+        vocabulary: 70,
+        clarity: 80,
+        confidence: 65,
+        summary: "Analysis currently unavailable. Please try again later.",
+        suggestions: ["Maintain a professional tone.", "Structure your thoughts clearly.", "Review your key points."]
+      };
+    }
   }
 
   async analyzeCodingSubmission(challenge: CodingChallenge, code: string): Promise<AICodingFeedback> {

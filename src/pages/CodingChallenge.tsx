@@ -4,10 +4,13 @@ import Editor from '@monaco-editor/react';
 import { ArrowLeft, Play, Send, CheckCircle2, XCircle, Info, Sparkles, Zap, Lightbulb } from 'lucide-react';
 import { CODING_CHALLENGES } from '../data/mockData';
 import { aiService, AICodingFeedback } from '../services/aiService';
+import { supabaseService } from '../services/supabaseService';
+import { useAuth } from '../context/AuthContext';
 
 const CodingChallenge: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const challenge = CODING_CHALLENGES.find(c => c.id === id);
   
   const [code, setCode] = useState(challenge?.starterCode || '');
@@ -35,8 +38,34 @@ const CodingChallenge: React.FC = () => {
       setStatus('success');
       setOutput('Submission Successful!\nAll 15/15 test cases passed.\nRuntime: 64ms (Beats 82%)\nMemory: 42MB (Beats 71%)');
       
+      // Insert result into Supabase
+      if (user && challenge) {
+        const { error } = await supabaseService.logActivity(user.id, 'Coding', {
+          challenge_id: challenge.id,
+          score: 100
+        });
+        
+        // Also save to coding_results specifically for analytics
+        const { error: resultError } = await supabaseService.supabase
+          .from('coding_results')
+          .insert([
+            { 
+              user_id: user.id, 
+              challenge_id: challenge.id, 
+              score: 100, 
+              completed_at: new Date().toISOString() 
+            }
+          ]);
+        
+        if (error || resultError) {
+          console.error('Error inserting coding result:', error || resultError);
+        } else {
+          console.log('Coding result inserted successfully');
+        }
+      }
+
       // Get AI feedback
-      const feedback = await aiService.analyzeCodingSubmission(challenge, code);
+      const feedback = await aiService.analyzeCodingSubmission(challenge!, code);
       setAiFeedback(feedback);
       setIsAnalyzing(false);
     }, 1500);
