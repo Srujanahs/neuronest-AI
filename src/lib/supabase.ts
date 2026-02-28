@@ -20,7 +20,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 export const supabase = createClient(
   supabaseUrl || '',
-  supabaseAnonKey || ''
+  supabaseAnonKey || '',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      // @ts-ignore - lock might not be in the type definition but is supported by gotrue
+      lock: false
+    }
+  }
 );
 
 // Helper types for common database operations

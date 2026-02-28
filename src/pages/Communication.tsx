@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { MessageSquare, Sparkles, CheckCircle2, AlertCircle, TrendingUp, ShieldCheck } from 'lucide-react';
 import { aiService, AICommunicationFeedback } from '../services/aiService';
+import { userService } from '../services/userService';
+import { useAuth } from '../context/AuthContext';
 
 const Communication: React.FC = () => {
+  const { user } = useAuth();
   const [text, setText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<AICommunicationFeedback | null>(null);
@@ -13,6 +16,22 @@ const Communication: React.FC = () => {
     try {
       const result = await aiService.analyzeCommunication(text);
       setFeedback(result);
+      
+      // Save progress to Supabase
+      if (user?.id) {
+        await userService.updateUserProgress(user.id, {
+          communication_score: Math.round((result.fluency + result.vocabulary + result.clarity + result.confidence) / 4)
+        });
+        await userService.logActivity(user.id, 'communication_analysis', {
+          text_length: text.length,
+          scores: {
+            fluency: result.fluency,
+            vocabulary: result.vocabulary,
+            clarity: result.clarity,
+            confidence: result.confidence
+          }
+        });
+      }
     } catch (error) {
       console.error("Analysis failed", error);
     } finally {

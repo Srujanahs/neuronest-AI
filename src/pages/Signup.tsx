@@ -1,25 +1,61 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Brain, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Brain, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 const Signup: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords don't match");
+      setError("Passwords don't match");
       return;
     }
-    signup(name, email);
-    navigate('/dashboard');
+    
+    setLoading(true);
+    setError(null);
+    try {
+      await signup(name, email, password);
+      setIsSuccess(true);
+      // Don't navigate immediately if they need to confirm email
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <div className="w-full max-w-md p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 text-center">
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Check your email!</h1>
+          <p className="text-slate-500 dark:text-slate-400 mb-8">
+            We've sent a confirmation link to <span className="font-semibold text-slate-900 dark:text-white">{email}</span>. 
+            Please verify your email to activate your account.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
@@ -93,12 +129,19 @@ const Signup: React.FC = () => {
             </div>
           </div>
 
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded-xl border border-red-100 dark:border-red-800 mb-2">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 group mt-4"
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 group mt-4"
           >
-            Create Account
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            {loading ? 'Creating Account...' : 'Create Account'}
+            {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
           </button>
         </form>
 

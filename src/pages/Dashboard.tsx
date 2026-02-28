@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Code, Brain, MessageSquare, TrendingUp, Clock, CheckCircle2, Play } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ANALYTICS_DATA } from '../data/mockData';
 import { Link } from 'react-router-dom';
+import { userService, UserProgress } from '../services/userService';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const [progress, setProgress] = useState<UserProgress | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      userService.getUserProgress(user.id).then(setProgress);
+    }
+  }, [user?.id]);
 
   const skillCards = [
-    { title: 'Coding', progress: 72, icon: Code, color: 'bg-blue-500', path: '/coding' },
-    { title: 'Aptitude', progress: 65, icon: Brain, color: 'bg-emerald-500', path: '/aptitude' },
-    { title: 'Communication', progress: 58, icon: MessageSquare, color: 'bg-purple-500', path: '/communication' },
+    { title: 'Coding', progress: progress?.coding_score || 72, icon: Code, color: 'bg-blue-500', path: '/coding' },
+    { title: 'Aptitude', progress: progress?.aptitude_score || 65, icon: Brain, color: 'bg-emerald-500', path: '/aptitude' },
+    { title: 'Communication', progress: progress?.communication_score || 58, icon: MessageSquare, color: 'bg-purple-500', path: '/communication' },
   ];
 
   const recommendations = [
