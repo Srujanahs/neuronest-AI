@@ -103,8 +103,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    console.log('Logout initiated...');
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      console.log('Supabase signOut successful');
+    } catch (error) {
+      console.error('Logout error:', error);
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (e) {
+        // Ignore second error
+      }
+    } finally {
+      console.log('Clearing user state and redirecting...');
+      setUser(null);
+      setLoading(false);
+      // Force navigation to login to ensure clean state
+      window.location.href = '/login';
+    }
   };
 
   return (
